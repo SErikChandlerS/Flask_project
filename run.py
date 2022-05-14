@@ -19,15 +19,12 @@ mysql = MySQL(app)
 
 
 naming_dict_goals = {
-    'user_id': 'user_id',
-    'goal_id': 'id',
-    'title': 'name',
+    'id': 'id',
+    'label': 'label',
     'description': 'description',
-    'deadline': 'deadline',
-    'created_on': 'dateCreated',
-    'complete_status': 'state',
-    'publish_status': 'published',
-    'date_finished': 'dateFinished'
+    'summary': 'summary',
+    'done': 'done',
+    'user_id': 'user_id'
 }
 
 naming_dict_goals_rev = {val: key for key, val in naming_dict_goals.items()}
@@ -72,25 +69,10 @@ def get_goals():
         except:
             mysql.connection.rollback()
             return make_response("Server Error", 500)
-        columns = [naming_dict_goals[col[0]] for col in cur.description]
-        rows = [dict(zip(columns, row)) for row in cur.fetchall()]
-        for row in rows:
-            row['published'] = row['published'] == 'true'
-        for row in rows:
-            command = f'''SELECT * FROM milestones WHERE goal_id = "{row['id']}"'''
-            try:
-                cur.execute(command)
-                mysql.connection.commit()
-            except:
-                mysql.connection.rollback()
-                return make_response("Server Error", 500)
-            columns = [naming_dict_milestones[col[0]] for col in cur.description]
-            milestones = [dict(zip(columns, row)) for row in cur.fetchall()]
-            for milestone in milestones:
-                milestone['state'] = milestone['state'] == 'true'
-            row['milestones'] = milestones
-        rows = {'list': rows}
-        return make_response(jsonify(rows), 200)
+        rows = cur.fetchall()
+        dict = {'list': rows}
+
+        return make_response(jsonify(dict), 200)
 
 
 @app.route('/add-goal', methods=['POST'])
@@ -102,28 +84,28 @@ def add_goal():
     if request.method == 'POST':
         print(request.data.decode())
         goal_details = ast.literal_eval(request.data.decode())
-        user_id = goal_details[naming_dict_goals['user_id']]
-        publish_status = goal_details[naming_dict_goals['publish_status']]
-        created_on = goal_details[naming_dict_goals['created_on']]
-        title = goal_details[naming_dict_goals['title']]
+        goal_id = goal_details[naming_dict_goals['id']]
+        label = goal_details[naming_dict_goals['label']]
+        summary = goal_details[naming_dict_goals['summary']]
         description = goal_details[naming_dict_goals['description']]
-        complete_status = goal_details[naming_dict_goals['complete_status']]
-        deadline = goal_details[naming_dict_goals['deadline']]
-        date_finished = goal_details[naming_dict_goals['date_finished']]
+        done = goal_details[naming_dict_goals['done']]
+        user_id = goal_details[naming_dict_goals['user_id']]
         cur = mysql.connection.cursor()
+        # command = '''UPDATE goals SET publish_status = ?, created_on = ?, title = ?, description = ?,
+        # complete_status = ?, deadline = ?, date_finished = ? WHERE goal_id = ?;'''
+        command = f'''INSERT INTO goals(goal_id, user_id, label, summary, done, description) VALUES ("{goal_id}", "{user_id}", "{label}", 
+                "{summary}", "{done}", "{description}");'''
         # command = '''INSERT INTO goals(user_id, publish_status, created_on, title, description, complete_status, deadline,
         #                                date_finished) VALUES (?, ?, ?, ?, ?, ?, ?, ?);'''
-        command = f'''INSERT INTO goals(user_id, publish_status, created_on, title, description, complete_status, 
-        deadline, date_finished) VALUES ("{user_id}", "{publish_status}", "{created_on}", "{title}", "{description}", "{complete_status}", "{deadline}", "{date_finished}");'''
+
         try:
             print(command)
             cur.execute(command)
             mysql.connection.commit()
-        except:
+        except Exception as e:
             mysql.connection.rollback()
-            return make_response("Server Error", 500)
-        id = cur.lastrowid
-        return make_response(jsonify({'id': id}), 200)
+            return make_response(e, 500)
+        return make_response(jsonify({'id': goal_id}), 200)
 
 
 @app.route('/add-milestone', methods=['POST'])
@@ -135,7 +117,7 @@ def add_milestone():
     if request.method == 'POST':
         print(ast.literal_eval(request.data.decode()))
         milestone_details = ast.literal_eval(request.data.decode())
-        goal_id = milestone_details[naming_dict_milestones['goal_id']]
+        goal_id = milestone_details[naming_dict_milestones['id']]
         title = milestone_details[naming_dict_milestones['title']]
         complete_status = milestone_details[naming_dict_milestones['complete_status']]
         cur = mysql.connection.cursor()
@@ -168,18 +150,13 @@ def remove_goal():
         cur = mysql.connection.cursor()
         # command = '''DELETE FROM goals where goal_id = ?'''
         try:
-
-            # command = '''DELETE FROM milestones where goal_id = ?'''
-            command = f'''DELETE FROM milestones where goal_id = {goal_id}'''
-            cur.execute(command)
-
             command = f'''DELETE FROM goals where goal_id = {goal_id};'''
             cur.execute(command)
             mysql.connection.commit()
         except Exception as e:
             mysql.connection.rollback()
             print(e)
-            return make_response("Server Error", 500)
+            return make_response(goal_id, 500)
         cur.close()
         return make_response("OK", 200)
 
@@ -217,20 +194,15 @@ def edit_goal():
     """
     if request.method == 'POST':
         goal_details = ast.literal_eval(request.data.decode())
-        goal_id = goal_details[naming_dict_goals['goal_id']]
-        user_id = goal_details[naming_dict_goals['user_id']]
-        publish_status = goal_details[naming_dict_goals['publish_status']]
-        created_on = goal_details[naming_dict_goals['created_on']]
-        title = goal_details[naming_dict_goals['title']]
+        goal_id = goal_details[naming_dict_goals['id']]
+        label = goal_details[naming_dict_goals['label']]
+        summary = goal_details[naming_dict_goals['summary']]
         description = goal_details[naming_dict_goals['description']]
-        complete_status = goal_details[naming_dict_goals['complete_status']]
-        deadline = goal_details[naming_dict_goals['deadline']]
-        date_finished = goal_details[naming_dict_goals['date_finished']]
         cur = mysql.connection.cursor()
         # command = '''UPDATE goals SET publish_status = ?, created_on = ?, title = ?, description = ?,
         # complete_status = ?, deadline = ?, date_finished = ? WHERE goal_id = ?;'''
-        command = f'''UPDATE goals SET publish_status = "{publish_status}", created_on = "{created_on}", title = "{title}", description = "{description}", 
-                complete_status = "{complete_status}", deadline = "{deadline}", date_finished = "{date_finished}" WHERE goal_id = "{goal_id}";'''
+        command = f'''UPDATE goals SET goal_id = "{goal_id}", label = "{label}", description = "{description}", 
+                summary = "{summary}";'''
         try:
             # cur.execute(command, [publish_status, created_on, title, description, complete_status, deadline, date_finished, goal_id])
             cur.execute(command)
@@ -300,32 +272,17 @@ def init_db():
     with app.app_context():
         cur = mysql.connection.cursor()
         command = '''CREATE TABLE IF NOT EXISTS `goals` (
-                          `goal_id` int PRIMARY KEY AUTO_INCREMENT,
-                          `user_id` varchar(255),
-                          `publish_status` varchar(255),
-                          `created_on` varchar(63),
-                          `title` varchar(255),
-                          `description` varchar(1023),
-                          `complete_status` varchar(255),
-                          `deadline` varchar(63),
-                          `date_finished` varchar(63));'''
+                          `goal_id` varchar(255) PRIMARY KEY,
+                          `user_id` varchar(64),
+                          `label` varchar(255),
+                          `summary` varchar(1024),
+                          `done` varchar(64),
+                          `description` varchar(1024));'''
         cur.execute(command)
         mysql.connection.commit()
 
-        command = '''CREATE TABLE IF NOT EXISTS `milestones` (
-                      `milestone_id` int PRIMARY KEY AUTO_INCREMENT,
-                      `goal_id` int,
-                      `complete_status` varchar(255),
-                      `title` varchar(255));'''
-        cur.execute(command)
-        mysql.connection.commit()
-
-        command = '''ALTER TABLE `milestones` ADD FOREIGN KEY (`goal_id`) REFERENCES `goals` (`goal_id`);'''
-        cur.execute(command)
-        mysql.connection.commit()
         cur.close()
     show_table("goals")
-    show_table("milestones")
 
 
 if __name__ == '__main__':
