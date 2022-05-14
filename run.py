@@ -5,8 +5,6 @@ from flask_mysqldb import MySQL
 import yaml
 import ast
 
-
-
 IP = '0.0.0.0'
 PORT = 3001
 app = Flask(__name__)
@@ -16,7 +14,6 @@ app.config['MYSQL_USER'] = 'newuser'
 app.config['MYSQL_PASSWORD'] = 'password'
 app.config['MYSQL_DB'] = 'goalify'
 mysql = MySQL(app)
-
 
 naming_dict_goals = {
     'id': 'id',
@@ -70,7 +67,15 @@ def get_goals():
             mysql.connection.rollback()
             return make_response("Server Error", 500)
         rows = cur.fetchall()
-        dict = {'list': rows}
+        list = []
+        for row in rows:
+            list.append({'id': row[0],
+                         'user_id': row[1],
+                         'label': row[2],
+                         'summary': row[3],
+                         'done': row[4],
+                         'description': row[5]})
+        dict = {'list': list}
 
         return make_response(jsonify(dict), 200)
 
