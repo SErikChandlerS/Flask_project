@@ -8,4 +8,5 @@ mysqlclient==2.0.3
 PyYAML==5.4.1
 Werkzeug==2.0.1
 pytest-flask
+gunicorn
 

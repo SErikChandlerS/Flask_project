@@ -7,8 +7,8 @@ services:
       - db
     env_file:
       - '.env'
-    ports:
-      - '8000:5000'
+    expose:
+      - 5000
 
   db:
     image: mysql:5.7
@@ -20,3 +20,11 @@ services:
       MYSQL_PASSWORD: password
       MYSQL_DATABASE: goalify
 
+  nginx:
+    build: ./nginx
+    ports:
+      - 1337:80
+    depends_on:
+      - website
+    volumes:
+      - ./nginx/:/etc/nginx/:ro

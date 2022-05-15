@@ -13,4 +13,4 @@ flask db migrate
 flask db upgrade
 
 cd /Photos-Docker-Flask
-python run.py
+gunicorn --bind 0.0.0.0:5000 run:app
